@@ -25,18 +25,34 @@ async def get_discount_sneakers(message: types.Message):
 
     period = 30
     data_getter = DataGetter(period)
-    # data_getter.get_yandex_afisha_info()
+    data_getter.get_yandex_afisha_info()
+    rating_border = 7
 
     with open(f"movies-{data_getter.DATE}.json", encoding='utf-8-sig') as file:
         data = json.load(file)
 
     for item in data:
-        card = f"{hlink(item['title'], item['link'])}\n\n" \
-               f"{hbold('Цена: ')} от {item['min_price']} ₽\n\n" \
-               f"{hbold('Год выпуска: ')} {item['released_year']}\n\n" \
-               f"{hbold('Рейтинг: ')} {item['rating']}\n\n" \
-               f"{hbold('Даты показа: ')} {item['dates']}\n\n" \
-               f"{hbold('Описание: ')} {item['description']}"
+        if rating_border and item.get('rating') < rating_border:
+            break
+        arg_dict = {
+            'Цена:': item.get('min_price'),
+            'Рейтинг:': item.get('rating'),
+            'Даты показа:': item.get('dates'),
+            'Год выпуска:': item.get('released_year'),
+            'Описание:': item.get('description'),
+        }
+
+        card = f"{hlink(item['title'], item['link'])}\n\n"
+
+        for arg in arg_dict:
+            if arg_dict[arg]:
+                if arg == 'Цена:':
+                    string = f"{hbold(arg)} от {arg_dict[arg]} ₽\n"
+                elif arg == 'Описание:':
+                    string = f"\n{hbold(arg)} {arg_dict[arg]}\n"
+                else:
+                    string = f"{hbold(arg)} {arg_dict[arg]}\n"
+                card = "".join((card, string))
 
         await message.answer(card)
 

@@ -58,9 +58,10 @@ class DataGetter:
 
             movie_info_dict['content_rating'] = card['event']['contentRating']
 
-            movie_info_dict['dates'] = card['scheduleInfo']['dates'][0]
+            movie_info_dict['dates'] = card['scheduleInfo']['dates'][0].replace("-", ".")
             if len(card['scheduleInfo']['dates']) > 1:
-                movie_info_dict['dates'] = ' - '.join((movie_info_dict['dates'], card['scheduleInfo']['dates'][-1]))
+                movie_info_dict['dates'] = ' - '.join(
+                    (movie_info_dict['dates'], card['scheduleInfo']['dates'][-1].replace("-", ".")))
 
             movie_info_dict['min_price'] = None
             if card['scheduleInfo']['prices']:
