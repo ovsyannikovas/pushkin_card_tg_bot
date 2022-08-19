@@ -1,7 +1,5 @@
 import json
-import time
 import requests
-from random import random
 from datetime import datetime
 
 
@@ -34,8 +32,6 @@ class DataGetter:
 
             pushkin_card_list.extend(list(filter(self.is_pushkin_card_allowed, data['data'])))
 
-            time.sleep(random())
-
         return pushkin_card_list
 
     def get_yandex_afisha_info(self):
@@ -45,29 +41,31 @@ class DataGetter:
         movies_info_list = []
         for card in pushkin_card_list:
             movie_info_dict = {}
+
             movie_info_dict['image'] = card['event']['image']['sizes']['microdata']['url']
             movie_info_dict['title'] = card['event']['title']
             movie_info_dict['description'] = card['event']['argument']
             movie_info_dict['link'] = domain + card['event']['url']
+
             movie_released_year_str = card['event']['dateReleased']
             if movie_released_year_str:
                 movie_info_dict['released_year'] = movie_released_year_str[:4]
+
             movie_info_dict['rating'] = 0
             rating_dict = card['event']['kinopoisk']
             if rating_dict:
                 movie_info_dict['rating'] = rating_dict['value']
+
             movie_info_dict['content_rating'] = card['event']['contentRating']
+
             movie_info_dict['dates'] = card['scheduleInfo']['dates'][0]
             if len(card['scheduleInfo']['dates']) > 1:
                 movie_info_dict['dates'] = ' - '.join((movie_info_dict['dates'], card['scheduleInfo']['dates'][-1]))
+
             movie_info_dict['min_price'] = None
             if card['scheduleInfo']['prices']:
-                movie_prices = list(map(lambda x: x['value'] / 100, card['scheduleInfo']['prices']))
+                movie_prices = list(map(lambda x: x['value'] // 100, card['scheduleInfo']['prices']))
                 movie_info_dict['min_price'] = min(movie_prices)
-
-            # for info in movie_info_dict:
-            #     if movie_info_dict[info] is None:
-            #         movie_info_dict[info] = 'Отсутствует'
 
             movies_info_list.append(movie_info_dict)
 
