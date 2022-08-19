@@ -1,11 +1,8 @@
 import json
 import time
-from random import random
-
-from datetime import datetime
-
-from selenium import webdriver
 import requests
+from random import random
+from datetime import datetime
 
 
 class DataGetter:
@@ -28,48 +25,51 @@ class DataGetter:
         total = data["paging"]["total"]
         limit_max = 20
 
-        card_list_pushkin = []
+        pushkin_card_list = []
         for offset in range(0, total + 1, limit_max):
             url = f"https://afisha.yandex.ru/api/events/rubric/cinema?limit={limit_max}&offset={offset}&hasMixed=0&" \
                   f"date={self.DATE}&period={self.PERIOD}&city=saint-petersburg&_=1660756014055"
             response = requests.get(url)
             data = response.json()
 
-            card_list_pushkin.extend(list(filter(self.is_pushkin_card_allowed, data['data'])))
+            pushkin_card_list.extend(list(filter(self.is_pushkin_card_allowed, data['data'])))
 
             time.sleep(random())
 
-        return card_list_pushkin
+        return pushkin_card_list
 
     def get_yandex_afisha_info(self):
         domain = "https://afisha.yandex.ru"
-        card_list_pushkin = self.get_data_dict()
+        pushkin_card_list = self.get_data_dict()
 
         movies_info_list = []
-        for card in card_list_pushkin:
-            movie_image = card['event']['image']['sizes']['microdata']['url']
-            movie_title = card['event']['title']
-            movie_description = card['event']['argument']
-            movie_link = domain + card['event']['url']
-            movie_released_year = None
+        for card in pushkin_card_list:
+            movie_info_dict = {}
+            movie_info_dict['image'] = card['event']['image']['sizes']['microdata']['url']
+            movie_info_dict['title'] = card['event']['title']
+            movie_info_dict['description'] = card['event']['argument']
+            movie_info_dict['link'] = domain + card['event']['url']
             movie_released_year_str = card['event']['dateReleased']
             if movie_released_year_str:
-                movie_released_year = movie_released_year_str[:4]
-            movie_rating = 0
+                movie_info_dict['released_year'] = movie_released_year_str[:4]
+            movie_info_dict['rating'] = 0
             rating_dict = card['event']['kinopoisk']
             if rating_dict:
-                movie_rating = rating_dict['value']
-            movie_content_rating = card['event']['contentRating']
+                movie_info_dict['rating'] = rating_dict['value']
+            movie_info_dict['content_rating'] = card['event']['contentRating']
+            movie_info_dict['dates'] = card['scheduleInfo']['dates'][0]
+            if len(card['scheduleInfo']['dates']) > 1:
+                movie_info_dict['dates'] = ' - '.join((movie_info_dict['dates'], card['scheduleInfo']['dates'][-1]))
+            movie_info_dict['min_price'] = None
+            if card['scheduleInfo']['prices']:
+                movie_prices = list(map(lambda x: x['value'] / 100, card['scheduleInfo']['prices']))
+                movie_info_dict['min_price'] = min(movie_prices)
 
-            movies_info_list.append({
-                "image": movie_image,
-                "title": movie_title,
-                "rating": movie_rating,
-                "description": movie_description,
-                "content_rating": movie_content_rating,
-                "released_year": movie_released_year,
-                "link": movie_link
-            })
+            # for info in movie_info_dict:
+            #     if movie_info_dict[info] is None:
+            #         movie_info_dict[info] = 'Отсутствует'
+
+            movies_info_list.append(movie_info_dict)
 
         movies_info_list.sort(key=lambda movie: movie["rating"], reverse=True)
 
@@ -82,7 +82,7 @@ class DataGetter:
 
 
 def main():
-    PERIOD = 14
+    PERIOD = 30
     data_getter = DataGetter(PERIOD)
     data_getter.get_yandex_afisha_info()
 
