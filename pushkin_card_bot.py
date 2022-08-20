@@ -5,7 +5,6 @@ from main import DataGetter
 import json
 import os
 
-# print(os.getenv("TOKEN"))
 bot = Bot(token=os.getenv("TOKEN"), parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot)
 
@@ -19,16 +18,21 @@ async def start(message: types.Message):
     await message.answer("Выберите категорию", reply_markup=keyboard)
 
 
-@dp.message_handler(Text(equals="Кино"))
-async def get_discount_sneakers(message: types.Message):
+@dp.message_handler(Text(equals=["Кино", "Спектакли"]))
+async def get_info(message: types.Message):
     await message.answer("Сбор информации...")
+
+    if message.text == "Кино":
+        path = "rubric/cinema"
+    else:
+        path = "selections/pushkin-card-theatre"
 
     period = 30
     data_getter = DataGetter(period)
-    data_getter.get_yandex_afisha_info()
+    data_getter.get_yandex_afisha_info(path)
     rating_border = 7
 
-    with open(f"movies-{data_getter.DATE}.json", encoding='utf-8-sig') as file:
+    with open(data_getter.JSON_FILE_PATH, encoding='utf-8-sig') as file:
         data = json.load(file)
 
     for item in data:
@@ -47,11 +51,13 @@ async def get_discount_sneakers(message: types.Message):
         for arg in arg_dict:
             if arg_dict[arg]:
                 if arg == 'Цена:':
-                    string = f"{hbold(arg)} от {arg_dict[arg]} ₽\n"
+                    string = f"{hbold(arg)}  от {arg_dict[arg]} ₽\n"
+                elif arg == 'Рейтинг:':
+                    string = f"{hbold(arg)}  {arg_dict[arg]}★\n"
                 elif arg == 'Описание:':
-                    string = f"\n{hbold(arg)} {arg_dict[arg]}\n"
+                    string = f"\n{hbold(arg)}  {arg_dict[arg]}.\n"
                 else:
-                    string = f"{hbold(arg)} {arg_dict[arg]}\n"
+                    string = f"{hbold(arg)}  {arg_dict[arg]}\n"
                 card = "".join((card, string))
 
         await message.answer(card)
