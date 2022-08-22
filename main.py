@@ -1,24 +1,32 @@
 import json
 import requests
 from datetime import datetime
+from cities import cities_dict
 
 
 class DataGetter:
-    def __init__(self, period):
-        self.PERIOD = period
+    def __init__(self, city, mode):
+        self.PERIOD = 30
         self.DATE = datetime.now().date()
+        self.CITY = cities_dict[city.strip().lower()]
+        self.SITE_PATH = self.get_site_path(mode)
         self.JSON_FILE_PATH = "result.json"
+
+    @staticmethod
+    def get_site_path(string):
+        string = string.strip().lower()
+        if string == "кино":
+            return "rubric/cinema"
+        elif string == "спектакли":
+            return "selections/pushkin-card-theatre"
 
     @staticmethod
     def is_pushkin_card_allowed(movie):
         return movie["scheduleInfo"]["pushkinCardAllowed"]
 
-
-    # cinema: rubric/cinema
-    # theatre: selections/pushkin-card-theatre
-    def get_data_dict(self, path):
-        url = f"https://afisha.yandex.ru/api/events/{path}?limit=1&offset=0&hasMixed=0&" \
-              f"date={self.DATE}&period={self.PERIOD}&city=saint-petersburg&_=1660756014055"
+    def get_data_list(self):
+        url = f"https://afisha.yandex.ru/api/events/{self.SITE_PATH}?limit=1&offset=0&hasMixed=0&" \
+              f"date={self.DATE}&period={self.PERIOD}&city={self.CITY}&_=1660756014055"
 
         response = requests.get(url)
         data = response.json()
@@ -28,36 +36,35 @@ class DataGetter:
 
         pushkin_card_list = []
         for offset in range(0, total, limit_max):
-            url = f"https://afisha.yandex.ru/api/events/{path}?limit={limit_max}&offset={offset}&hasMixed=0&" \
-                  f"date={self.DATE}&period={self.PERIOD}&city=saint-petersburg&_=1660756014055"
+            url = f"https://afisha.yandex.ru/api/events/{self.SITE_PATH}?limit={limit_max}&offset={offset}&hasMixed=0&" \
+                  f"date={self.DATE}&period={self.PERIOD}&city={self.CITY}&_=1660756014055"
             response = requests.get(url)
             data = response.json()
 
-            if path == "rubric/cinema":
+            if self.SITE_PATH == "rubric/cinema":
                 pushkin_card_list.extend(list(filter(self.is_pushkin_card_allowed, data['data'])))
             else:
                 pushkin_card_list.extend(list(data['data']))
 
         return pushkin_card_list
 
-    def get_yandex_afisha_info(self, path):
+    def get_yandex_afisha_info(self):
         domain = "https://afisha.yandex.ru"
-        pushkin_card_list = self.get_data_dict(path)
+        pushkin_card_list = self.get_data_list()
 
         movies_info_list = []
         for card in pushkin_card_list:
-            movie_info_dict = {}
-
-            movie_info_dict['title'] = card['event']['title']
-            movie_info_dict['description'] = card['event']['argument']
-            movie_info_dict['link'] = domain + card['event']['url']
+            movie_info_dict = {
+                'title': card['event']['title'],
+                'description': card['event']['argument'],
+                'link': domain + card['event']['url']}
 
             movie_released_year_str = card['event']['dateReleased']
             if movie_released_year_str:
                 movie_info_dict['released_year'] = movie_released_year_str[:4]
 
             movie_info_dict['rating'] = 0
-            if path == "rubric/cinema":
+            if self.SITE_PATH == "rubric/cinema":
                 rating_dict = card['event']['kinopoisk']
             else:
                 rating_dict = card['event']['userRating']['overall']
@@ -89,9 +96,8 @@ class DataGetter:
 
 
 def main():
-    PERIOD = 30
-    data_getter = DataGetter(PERIOD)
-    data_getter.get_yandex_afisha_info("selections/pushkin-card-theatre")
+    data_getter = DataGetter("Москва", "спектакли")
+    data_getter.get_yandex_afisha_info()
 
 
 if __name__ == "__main__":

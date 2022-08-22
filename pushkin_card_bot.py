@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters import Text
-from aiogram.utils.markdown import hbold, hlink, hide_link
+from aiogram.utils.markdown import hbold, hlink
 from main import DataGetter
 import json
 import os
@@ -22,14 +22,8 @@ async def start(message: types.Message):
 async def get_info(message: types.Message):
     await message.answer("Сбор информации...")
 
-    if message.text == "Кино":
-        path = "rubric/cinema"
-    else:
-        path = "selections/pushkin-card-theatre"
-
-    period = 30
-    data_getter = DataGetter(period)
-    data_getter.get_yandex_afisha_info(path)
+    data_getter = DataGetter("москва", message.text)
+    data_getter.get_yandex_afisha_info()
     rating_border = 7
 
     with open(data_getter.JSON_FILE_PATH, encoding='utf-8-sig') as file:
