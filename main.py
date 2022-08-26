@@ -53,10 +53,10 @@ class DataGetter:
 
             await asyncio.gather(*tasks)
 
-    def get_yandex_afisha_info(self):
+    async def get_yandex_afisha_info(self):
         domain = "https://afisha.yandex.ru"
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        asyncio.run(self.gather_data())
+        await self.gather_data()
         pushkin_card_list = self.pushkin_card_list
 
         movies_info_list = []
@@ -92,7 +92,7 @@ class DataGetter:
 
             movies_info_list.append(movie_info_dict)
 
-        # movies_info_list.sort(key=lambda movie: movie["rating"], reverse=True)
+        movies_info_list.sort(key=lambda movie: movie["rating"], reverse=True)
 
         self.write_data_to_json(movies_info_list, self.JSON_FILE_PATH)
 

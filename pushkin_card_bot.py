@@ -3,6 +3,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram.utils.markdown import hbold, hlink
 from main import DataGetter
 from asyncio import sleep
+import asyncio
 import json
 import os
 
@@ -24,7 +25,7 @@ async def get_info(message: types.Message):
     await message.answer("Сбор информации...")
 
     data_getter = DataGetter("москва", message.text)
-    data_getter.get_yandex_afisha_info()
+    await data_getter.get_yandex_afisha_info()
     rating_border = 7
 
     with open(data_getter.JSON_FILE_PATH, encoding='utf-8-sig') as file:
