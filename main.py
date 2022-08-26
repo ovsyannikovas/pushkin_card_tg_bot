@@ -1,7 +1,8 @@
 import json
-import requests
 from datetime import datetime
 from cities import cities_dict
+import asyncio
+import aiohttp
 
 
 class DataGetter:
@@ -11,6 +12,7 @@ class DataGetter:
         self.CITY = cities_dict[city.strip().lower()]
         self.SITE_PATH = self.get_site_path(mode)
         self.JSON_FILE_PATH = "result.json"
+        self.pushkin_card_list = []
 
     @staticmethod
     def get_site_path(string):
@@ -24,33 +26,38 @@ class DataGetter:
     def is_pushkin_card_allowed(movie):
         return movie["scheduleInfo"]["pushkinCardAllowed"]
 
-    def get_data_list(self):
-        url = f"https://afisha.yandex.ru/api/events/{self.SITE_PATH}?limit=1&offset=0&hasMixed=0&" \
+    async def get_page_data(self, session, offset, max_limit):
+        url = f"https://afisha.yandex.ru/api/events/{self.SITE_PATH}?limit={max_limit}&offset={offset}&hasMixed=0&" \
               f"date={self.DATE}&period={self.PERIOD}&city={self.CITY}&_=1660756014055"
+        async with session.get(url) as response:
+            data = await response.json()
 
-        response = requests.get(url)
-        data = response.json()
+        if self.SITE_PATH == "rubric/cinema":
+            self.pushkin_card_list.extend(list(filter(self.is_pushkin_card_allowed, data['data'])))
+        else:
+            self.pushkin_card_list.extend(list(data['data']))
 
-        total = data["paging"]["total"]
-        limit_max = 20
-
-        pushkin_card_list = []
-        for offset in range(0, total, limit_max):
-            url = f"https://afisha.yandex.ru/api/events/{self.SITE_PATH}?limit={limit_max}&offset={offset}&hasMixed=0&" \
+    async def gather_data(self):
+        async with aiohttp.ClientSession() as session:
+            url = f"https://afisha.yandex.ru/api/events/{self.SITE_PATH}?limit=1&offset=0&hasMixed=0&" \
                   f"date={self.DATE}&period={self.PERIOD}&city={self.CITY}&_=1660756014055"
-            response = requests.get(url)
-            data = response.json()
+            response = await session.get(url)
+            data = await response.json()
+            total, max_limit = data["paging"]["total"], 20
 
-            if self.SITE_PATH == "rubric/cinema":
-                pushkin_card_list.extend(list(filter(self.is_pushkin_card_allowed, data['data'])))
-            else:
-                pushkin_card_list.extend(list(data['data']))
+            tasks = []
 
-        return pushkin_card_list
+            for offset in range(0, total, max_limit):
+                task = asyncio.create_task(self.get_page_data(session, offset, max_limit))
+                tasks.append(task)
+
+            await asyncio.gather(*tasks)
 
     def get_yandex_afisha_info(self):
         domain = "https://afisha.yandex.ru"
-        pushkin_card_list = self.get_data_list()
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        asyncio.run(self.gather_data())
+        pushkin_card_list = self.pushkin_card_list
 
         movies_info_list = []
         for card in pushkin_card_list:
@@ -85,7 +92,7 @@ class DataGetter:
 
             movies_info_list.append(movie_info_dict)
 
-        movies_info_list.sort(key=lambda movie: movie["rating"], reverse=True)
+        # movies_info_list.sort(key=lambda movie: movie["rating"], reverse=True)
 
         self.write_data_to_json(movies_info_list, self.JSON_FILE_PATH)
 
@@ -96,7 +103,7 @@ class DataGetter:
 
 
 def main():
-    data_getter = DataGetter("Москва", "спектакли")
+    data_getter = DataGetter("санкт-петербург", "спектакли")
     data_getter.get_yandex_afisha_info()
 
 

@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters import Text
 from aiogram.utils.markdown import hbold, hlink
 from main import DataGetter
+from asyncio import sleep
 import json
 import os
 
@@ -12,7 +13,7 @@ dp = Dispatcher(bot)
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
     start_buttons = ["Кино", "Спектакли"]
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     keyboard.add(*start_buttons)
 
     await message.answer("Выберите категорию", reply_markup=keyboard)
@@ -29,9 +30,10 @@ async def get_info(message: types.Message):
     with open(data_getter.JSON_FILE_PATH, encoding='utf-8-sig') as file:
         data = json.load(file)
 
-    for item in data:
+    for index, item in enumerate(data):
         if rating_border and item.get('rating') < rating_border:
             break
+
         arg_dict = {
             'Цена:': item.get('min_price'),
             'Рейтинг:': item.get('rating'),
@@ -54,11 +56,14 @@ async def get_info(message: types.Message):
                     string = f"{hbold(arg)}  {arg_dict[arg]}\n"
                 card = "".join((card, string))
 
+        if index % 20 == 0:
+            await sleep(2)
+
         await message.answer(card)
 
 
 def main():
-    executor.start_polling(dp)
+    executor.start_polling(dp, skip_updates=True)
 
 
 if __name__ == "__main__":
