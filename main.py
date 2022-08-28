@@ -6,11 +6,11 @@ import aiohttp
 
 
 class DataGetter:
-    def __init__(self, city, mode):
+    def __init__(self, city, event_type):
         self.PERIOD = 30
         self.DATE = datetime.now().date()
-        self.CITY = cities_dict[city.strip().lower()]
-        self.SITE_PATH = self.get_site_path(mode)
+        self.CITY = cities_dict[city.replace(' ', '').lower()]
+        self.SITE_PATH = self.get_site_path(event_type)
         self.JSON_FILE_PATH = "result.json"
         self.pushkin_card_list = []
 
@@ -55,7 +55,6 @@ class DataGetter:
 
     async def get_yandex_afisha_info(self):
         domain = "https://afisha.yandex.ru"
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         await self.gather_data()
         pushkin_card_list = self.pushkin_card_list
 
@@ -80,10 +79,12 @@ class DataGetter:
 
             movie_info_dict['content_rating'] = card['event']['contentRating']
 
-            movie_info_dict['dates'] = card['scheduleInfo']['dates'][0].replace("-", ".")
+            movie_info_dict['dates'] = datetime.strptime(card['scheduleInfo']['dates'][0],
+                                                         '%Y-%m-%d').strftime('%d.%m.%Y')
             if len(card['scheduleInfo']['dates']) > 1:
                 movie_info_dict['dates'] = ' - '.join(
-                    (movie_info_dict['dates'], card['scheduleInfo']['dates'][-1].replace("-", ".")))
+                    (movie_info_dict['dates'],
+                     datetime.strptime(card['scheduleInfo']['dates'][-1], '%Y-%m-%d').strftime('%d.%m.%Y')))
 
             movie_info_dict['min_price'] = None
             if card['scheduleInfo']['prices']:
@@ -100,12 +101,3 @@ class DataGetter:
     def write_data_to_json(list_of_dict, json_file_path):
         with open(json_file_path, "w", encoding='utf-8-sig') as file:
             json.dump(list_of_dict, file, ensure_ascii=False)
-
-
-def main():
-    data_getter = DataGetter("санкт-петербург", "спектакли")
-    data_getter.get_yandex_afisha_info()
-
-
-if __name__ == "__main__":
-    main()
