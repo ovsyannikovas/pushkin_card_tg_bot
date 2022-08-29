@@ -4,7 +4,7 @@ cities_dict = {"москва": "moscow", "санкт-петербург": "saint
                "актобе": "aktobe", "алапаевск": "alapaevsk", "алатырь": "alatyr", "алдан": "aldan", "алейск": "aleysk",
                "александров": "aleksandrov", "алеsaint-petersburgксандровка": "aleksandrovka",
                "александровск": "aleksandrovsk",
-               "алексеевка": "alekseevka", "алексинСанкт-Петербург": "aleksin", "алматы": "almaty", "алушта": "alushta",
+               "алексеевка": "alekseevka", "алексин": "aleksin", "алматы": "almaty", "алушта": "alushta",
                "альметьевск": "almetyevsk", "анадырь": "anadyr", "анапа": "anapa", "ангарск": "angarsk",
                "анжеро-судженск": "angero-sudgensk", "апатиты": "apatity", "апшеронск": "apsheronsk",
                "ардатов": "ardatov", "арзамас": "arzamas", "армавир": "armavir", "арсеньев": "arsenev",
