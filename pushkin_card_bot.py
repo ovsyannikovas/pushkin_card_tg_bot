@@ -20,7 +20,7 @@ class UserInfoStatesGroup(StatesGroup):
     # filter_events = State()
 
 
-@dp.message_handler(commands="start", state=None)
+@dp.message_handler(commands="start", state="*")
 async def start(message: types.Message):
     await message.answer("Введите Ваш город.", reply_markup=types.ReplyKeyboardRemove())
     await UserInfoStatesGroup.city.set()
