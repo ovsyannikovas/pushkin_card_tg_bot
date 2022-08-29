@@ -1,0 +1,1 @@
+worker: python pushkin_card_bot.py
