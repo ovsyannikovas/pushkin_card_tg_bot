@@ -93,8 +93,6 @@ class DataGetter:
 
             movies_info_list.append(movie_info_dict)
 
-        movies_info_list.sort(key=lambda movie: movie["rating"], reverse=True)
-
         self.write_data_to_json(movies_info_list, self.JSON_FILE_PATH)
 
     @staticmethod

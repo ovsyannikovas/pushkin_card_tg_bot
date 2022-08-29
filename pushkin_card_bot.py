@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.utils.markdown import hbold, hlink
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher import FSMContext
 from main import DataGetter
 from cities import cities_dict
@@ -21,15 +22,20 @@ class UserInfoStatesGroup(StatesGroup):
 
 @dp.message_handler(commands="start", state=None)
 async def start(message: types.Message):
+    await message.answer("Введите Ваш город.", reply_markup=types.ReplyKeyboardRemove())
     await UserInfoStatesGroup.city.set()
-    await message.answer("Введите Ваш город.")
 
 
-@dp.message_handler(commands=["Поменять_город"], state="*")
+@dp.message_handler(lambda x: x.text.lower().replace(" ", "") == "поменятьгород", state="*")
 async def cancel_handler(message: types.Message, state: FSMContext):
     await state.finish()
-    await UserInfoStatesGroup.city.set()
-    await message.answer("Введите Ваш город.")
+    await start(message)
+
+
+def get_keyboard():
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("Кино", "Спектакли").add("Поменять город")
+    return keyboard
 
 
 @dp.message_handler(lambda x: x.text.lower().replace(' ', '') in cities_dict, state=UserInfoStatesGroup.city)
@@ -39,22 +45,13 @@ async def choose_city(message: types.Message, state: FSMContext):
 
     await UserInfoStatesGroup.next()
 
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    keyboard.add("Кино", "Спектакли").add("/Поменять_город")
-    await message.answer("Выберите категорию:", reply_markup=keyboard)
-
-
-@dp.message_handler(commands=["города"], state="*")  # not working
-async def show_cities_list(message: types.Message):
-    n = len(cities_dict)
-    for i in range(n, 15):
-        await message.answer(cities_dict.keys()[i:i + 15])
+    await message.answer("Выберите категорию мероприятия:", reply_markup=get_keyboard())
 
 
 @dp.message_handler(state=UserInfoStatesGroup.city)
 async def choose_city_fail(message: types.Message):
-    await message.answer("Такого города нет в базе :( Проверьте на опечатки и попробуйте ввести еще раз "
-                         f"или посмотрите в базе, набрав команду  {hbold('/города')} .")
+    await message.answer("Такого города нет в базе Яндекс Афиши. 😕 Проверьте на опечатки и попробуйте ввести еще раз.",
+                         reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(state=UserInfoStatesGroup.event_type)
@@ -63,9 +60,11 @@ async def choose_event_type(message: types.Message, state: FSMContext):
         city = data['city']
     event_type = message.text
 
-    # await state.finish()
-
-    await receive_info(message, city, event_type)
+    if not validate_message(message):
+        await message.answer("Неверная команда.")
+        await message.answer("Выберите категорию мероприятия:", reply_markup=get_keyboard())
+    else:
+        await receive_info(message, city, event_type)
 
 
 # async def choose_filters():
@@ -73,17 +72,19 @@ async def choose_event_type(message: types.Message, state: FSMContext):
 
 
 async def receive_info(message: types.Message, city, event_type):
-    await message.answer("Сбор информации...")
+    await message.answer("Сбор информации...", reply_markup=types.ReplyKeyboardRemove())
     data_getter = DataGetter(city, event_type)
     await data_getter.get_yandex_afisha_info()
-    rating_border = 7
 
     with open(data_getter.JSON_FILE_PATH, encoding='utf-8-sig') as file:
         data = json.load(file)
 
+    data.sort(key=lambda movie: movie["rating"], reverse=True)
+    rating_border = 7
+
     if len(data) == 0:
         await message.answer(
-            f"В городе {hbold(city.capitalize())} нет мероприятий выбранного типа на ближайшее время :(",
+            f"В городе {hbold(city.capitalize())} нет мероприятий выбранного типа на ближайшее время. 😕",
             reply_markup=None)
         return
 
@@ -114,19 +115,18 @@ async def receive_info(message: types.Message, city, event_type):
                 card = "".join((card, string))
 
         if index % 20 == 0:
-            await sleep(2)
+            await sleep(1)
 
         await message.answer(card, reply_markup=None)
+    await message.answer("Можете выбрать другой тип мероприятия или поменять город.", reply_markup=get_keyboard())
+
+
+def validate_message(message: types.Message):
+    return message.text.lower().replace(" ", "") in ("кино", "спектакли", "поменятьгород")
 
 
 def main():
     executor.start_polling(dp, skip_updates=True)
-
-    # # information check
-    # import asyncio
-    # loop = asyncio.run()
-    # data_getter = DataGetter("санкт-петербург", "кино")
-    # loop.run_until_complete(data_getter.get_yandex_afisha_info())
 
 
 if __name__ == "__main__":
