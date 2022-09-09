@@ -13,6 +13,8 @@ import os
 bot = Bot(token=os.getenv("TOKEN"), parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
+city = None
+
 
 class UserInfoStatesGroup(StatesGroup):
     city = State()
@@ -40,8 +42,8 @@ def get_keyboard():
 
 @dp.message_handler(lambda x: x.text.lower().replace(' ', '') in cities_dict, state=UserInfoStatesGroup.city)
 async def choose_city(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['city'] = message.text
+    global city
+    city = message.text
 
     await UserInfoStatesGroup.next()
 
@@ -56,8 +58,7 @@ async def choose_city_fail(message: types.Message):
 
 @dp.message_handler(state=UserInfoStatesGroup.event_type)
 async def choose_event_type(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        city = data['city']
+    global city
     event_type = message.text
 
     if not validate_message(message):
