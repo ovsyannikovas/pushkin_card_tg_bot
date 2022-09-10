@@ -18,7 +18,6 @@ city = None
 
 class UserInfoStatesGroup(StatesGroup):
     city = State()
-    event_type = State()
     # filter_events = State()
 
 
@@ -30,6 +29,8 @@ async def start(message: types.Message):
 
 @dp.message_handler(lambda x: x.text.lower().replace(" ", "") == "поменятьгород", state="*")
 async def cancel_handler(message: types.Message, state: FSMContext):
+    global city
+    city = None
     await state.finish()
     await start(message)
 
@@ -45,7 +46,7 @@ async def choose_city(message: types.Message, state: FSMContext):
     global city
     city = message.text
 
-    await UserInfoStatesGroup.next()
+    await state.finish()
 
     await message.answer("Выберите категорию мероприятия:", reply_markup=get_keyboard())
 
@@ -56,16 +57,15 @@ async def choose_city_fail(message: types.Message):
                          reply_markup=types.ReplyKeyboardRemove())
 
 
-@dp.message_handler(state=UserInfoStatesGroup.event_type)
+@dp.message_handler(lambda x: Text(equals=["кино", "спектакли"], ignore_case=True) and city)
 async def choose_event_type(message: types.Message, state: FSMContext):
     global city
     event_type = message.text
 
-    if not validate_message(message):
-        await message.answer("Неверная команда.")
-        await message.answer("Выберите категорию мероприятия:", reply_markup=get_keyboard())
-    else:
-        await receive_info(message, city, event_type)
+    # await message.answer("Неверная команда.")
+    # await message.answer("Выберите категорию мероприятия:", reply_markup=get_keyboard())
+
+    await receive_info(message, city, event_type)
 
 
 # async def choose_filters():
@@ -87,6 +87,7 @@ async def receive_info(message: types.Message, city, event_type):
         await message.answer(
             f"В городе {hbold(city.capitalize())} нет мероприятий выбранного типа на ближайшее время. 😕",
             reply_markup=None)
+        await message.answer("Выберите категорию мероприятия:", reply_markup=get_keyboard())
         return
 
     for index, item in enumerate(data):
@@ -120,10 +121,6 @@ async def receive_info(message: types.Message, city, event_type):
 
         await message.answer(card, reply_markup=None)
     await message.answer("Можете выбрать другой тип мероприятия или поменять город.", reply_markup=get_keyboard())
-
-
-def validate_message(message: types.Message):
-    return message.text.lower().replace(" ", "") in ("кино", "спектакли", "поменятьгород")
 
 
 def main():
